@@ -106,20 +106,39 @@ export const PetList = styled.ul`
   gap: 10px;
 `;
 
-export const PetItem = styled.li`
-  background: ${({ theme }) => theme.background};
+export const PetContainer = styled.div`
+  display: flex;
+  gap: 20px;
+  align-items: center;
   padding: 14px 20px;
   border-radius: 12px;
+  background: ${({ theme }) => theme.background};
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+`;
+
+export const PetImage = styled.img`
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #22c55e;
+`;
+
+export const PetItem = styled.li`
+  background: none;
+  padding: 0;
+  border-radius: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
 `;
 
 export const PetInfo = styled.div`
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex-grow: 1;
 `;
 
 export const ActionButtons = styled.div`

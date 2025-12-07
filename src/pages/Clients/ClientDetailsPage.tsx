@@ -6,6 +6,7 @@ import {
   updateClient,
   type Client,
   type Pet,
+  updatePetImage,
 } from "../../storage/localDB";
 import { v4 as uuid } from "uuid";
 import {
@@ -20,6 +21,8 @@ import {
   Button,
   PetList,
   PetItem,
+  PetContainer,
+  PetImage,
   PetInfo,
   ActionButtons,
   ActionButton,
@@ -34,6 +37,7 @@ import {
   isValidDate,
   addDays,
 } from "../../utils/dateUtils";
+import { fileToBase64 } from "../../utils/fileUtils";
 
 export default function ClientDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -51,6 +55,7 @@ export default function ClientDetailsPage() {
   const [newPetBreed, setNewPetBreed] = useState("");
   const [newPetFrequency, setNewPetFrequency] =
     useState<Pet["packageFrequency"]>("none");
+  const [newPetImage, setNewPetImage] = useState<string | null>(null);
 
   if (!client) {
     return (
@@ -62,6 +67,18 @@ export default function ClientDetailsPage() {
       </MainLayout>
     );
   }
+
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const base64String = await fileToBase64(file);
+      setNewPetImage(base64String);
+    } else {
+      setNewPetImage(null);
+    }
+  };
 
   // Função para adicionar um novo pet
   const handleAddPet = (e: React.FormEvent) => {
@@ -82,6 +99,7 @@ export default function ClientDetailsPage() {
       lastBathDate: null,
       renewalDate: initialRenewalDate,
       bathHistory: [],
+      imageBase64: newPetImage,
     };
 
     const updatedClient = {
@@ -94,6 +112,32 @@ export default function ClientDetailsPage() {
     setNewPetName("");
     setNewPetBreed("");
     setNewPetFrequency("none");
+    setNewPetImage(null);
+  };
+
+  // Função para atualizar a foto de um pet existente
+  const handleUpdatePetImage = async (
+    petToUpdateId: string,
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+
+    if (file && client) {
+      const newImageBase64 = await fileToBase64(file);
+
+      if (newImageBase64) {
+        const updatedClient = updatePetImage(
+          client.id,
+          petToUpdateId,
+          newImageBase64
+        );
+
+        // Define o novo estado com o cliente que a função já salvou no localStorage
+        setClient(updatedClient);
+
+        alert(`Foto do pet atualizada com sucesso!`);
+      }
+    }
   };
 
   const handleMarkBath = (petToUpdate: Pet) => {
@@ -315,6 +359,13 @@ Atenciosamente, Pata Mansa Pet Shop.
           value={newPetBreed}
           onChange={(e) => setNewPetBreed(e.target.value)}
         />
+
+        {/*CAMPO DE FOTO NO CADASTRO */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+          <label style={{ fontSize: "0.9em" }}>Foto:</label>
+          <input type="file" accept="image/*" onChange={handleFileChange} />
+        </div>
+
         <Select
           value={newPetFrequency}
           onChange={(e) =>
@@ -345,53 +396,92 @@ Atenciosamente, Pata Mansa Pet Shop.
 
             return (
               <PetItem key={pet.id}>
-                <PetInfo>
-                  <strong>
-                    {pet.name} ({pet.breed})
-                  </strong>
-                  <span>
-                    Pacote:{" "}
-                    {pet.packageFrequency === "weekly"
-                      ? "Semanal"
-                      : pet.packageFrequency === "bi-weekly"
-                      ? "Quinzenal"
-                      : pet.packageFrequency === "monthly"
-                      ? "Mensal"
-                      : "Nenhum"}
-                  </span>
-                  {pet.lastBathDate && (
-                    <small>
-                      Último Banho:{" "}
-                      {new Date(
-                        pet.lastBathDate + "T00:00:00"
-                      ).toLocaleDateString()}
-                    </small>
-                  )}
-                  {nextBathDate && (
-                    <small>
-                      Próximo Sugerido:{" "}
-                      <strong>
+                <PetContainer>
+                  {/* Exibe a imagem */}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                    }}
+                  >
+                    <PetImage
+                      src={
+                        pet.imageBase64 ||
+                        "https://via.placeholder.com/80?text=Pet"
+                      }
+                      alt={pet.name}
+                    />
+                    {/*CAMPO DE ATUALIZAÇÃO DE FOTO */}
+                    <label
+                      htmlFor={`upload-${pet.id}`}
+                      style={{
+                        cursor: "pointer",
+                        fontSize: "0.8em",
+                        marginTop: "5px",
+                        color: "#3b82f6",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Atualizar Foto
+                    </label>
+                    <input
+                      type="file"
+                      id={`upload-${pet.id}`}
+                      accept="image/*"
+                      style={{ display: "none" }} // Esconde o input nativo
+                      // Ao selecionar o arquivo, chama a função de atualização
+                      onChange={(e) => handleUpdatePetImage(pet.id, e)}
+                    />
+                  </div>
+                  <PetInfo>
+                    <strong>
+                      {pet.name} ({pet.breed})
+                    </strong>
+                    <span>
+                      Pacote:{" "}
+                      {pet.packageFrequency === "weekly"
+                        ? "Semanal"
+                        : pet.packageFrequency === "bi-weekly"
+                        ? "Quinzenal"
+                        : pet.packageFrequency === "monthly"
+                        ? "Mensal"
+                        : "Nenhum"}
+                    </span>
+                    {pet.lastBathDate && (
+                      <small>
+                        Último Banho:{" "}
                         {new Date(
-                          nextBathDate + "T00:00:00"
+                          pet.lastBathDate + "T00:00:00"
                         ).toLocaleDateString()}
-                      </strong>
-                    </small>
-                  )}
-                  {pet.renewalDate && (
-                    <small>
-                      Renovação:{" "}
-                      {/* Nota: A data de Renovação já usava `new Date(pet.renewalDate).toLocaleDateString()`, mas precisa ser corrigida também */}
-                      {new Date(
-                        pet.renewalDate + "T00:00:00"
-                      ).toLocaleDateString()}
-                    </small>
-                  )}
+                      </small>
+                    )}
+                    {nextBathDate && (
+                      <small>
+                        Próximo Sugerido:{" "}
+                        <strong>
+                          {new Date(
+                            nextBathDate + "T00:00:00"
+                          ).toLocaleDateString()}
+                        </strong>
+                      </small>
+                    )}
+                    {pet.renewalDate && (
+                      <small>
+                        Renovação:{" "}
+                        {/* Nota: A data de Renovação já usava `new Date(pet.renewalDate).toLocaleDateString()`, mas precisa ser corrigida também */}
+                        {new Date(
+                          pet.renewalDate + "T00:00:00"
+                        ).toLocaleDateString()}
+                      </small>
+                    )}
 
-                  {/* ALERTA DE RENOVAÇÃO */}
-                  {isRenewalDue && (
-                    <RenewalAlert>🚨 Pacote Vencido! Renovar.</RenewalAlert>
-                  )}
-                </PetInfo>
+                    {/* ALERTA DE RENOVAÇÃO */}
+                    {isRenewalDue && (
+                      <RenewalAlert>🚨 Pacote Vencido! Renovar.</RenewalAlert>
+                    )}
+                  </PetInfo>
+                </PetContainer>
 
                 <ActionButtons>
                   <ActionButton

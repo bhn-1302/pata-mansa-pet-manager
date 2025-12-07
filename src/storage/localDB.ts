@@ -8,6 +8,7 @@ export interface Pet {
   lastBathDate: string | null; // Último banho registrado (formato 'YYYY-MM-DD')
   renewalDate: string | null; // Data de renovação do pacote (formato 'YYYY-MM-DD')
   bathHistory: string[];
+  imageBase64: string | null;
 }
 
 export interface Client {
@@ -163,3 +164,55 @@ export function getDashboardStats() {
 
   return { totalClients, totalPets };
 }
+
+/**
+ * Atualiza o campo imageBase64 de um pet específico.
+ * @param clientId ID do cliente que possui o pet.
+ * @param petId ID do pet a ser atualizado.
+ * @param newImageBase64 Nova string Base64 da foto (ou null para remover).
+ * @returns O cliente atualizado.
+ */
+export const updatePetImage = (
+    clientId: string,
+    petId: string,
+    newImageBase64: string | null
+): Client => {
+    const clients = getClients();
+    
+    const clientIndex = clients.findIndex(c => c.id === clientId);
+    if (clientIndex === -1) {
+        throw new Error("Cliente não encontrado.");
+    }
+
+    const client = clients[clientIndex];
+    const petIndex = client.pets.findIndex(p => p.id === petId);
+
+    if (petIndex === -1) {
+        throw new Error("Pet não encontrado.");
+    }
+
+    // Cria uma cópia do pet com a imagem atualizada
+    const updatedPet: Pet = {
+        ...client.pets[petIndex],
+        imageBase64: newImageBase64,
+    };
+
+    // Cria a nova lista de pets
+    const updatedPets = [
+        ...client.pets.slice(0, petIndex),
+        updatedPet,
+        ...client.pets.slice(petIndex + 1),
+    ];
+
+    // Cria o cliente atualizado
+    const updatedClient: Client = {
+        ...client,
+        pets: updatedPets,
+    };
+
+    // Salva a lista de clientes atualizada
+    clients[clientIndex] = updatedClient;
+    localStorage.setItem("clients", JSON.stringify(clients));
+
+    return updatedClient;
+};
